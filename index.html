@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MPF Professional Accounts</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Tahoma,sans-serif;background:#f4f6f8;color:#17202a}
+header{background:#182b49;color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center}
+h1{margin:0;font-size:22px}button{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;background:#182b49;color:#fff}button.red{background:#a83232}
+nav{display:flex;gap:8px;flex-wrap:wrap;background:#fff;padding:10px;border-bottom:1px solid #ddd}
+main{max-width:1250px;margin:20px auto;padding:0 14px}.page{display:none}.page.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.card,.panel{background:#fff;border:1px solid #e0e4e8;border-radius:12px;padding:18px;margin-bottom:15px}.n{font-size:25px;font-weight:bold;margin-top:7px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label{display:block;font-weight:bold;margin-bottom:5px}input,select,textarea{width:100%;padding:10px;border:1px solid #ccd3da;border-radius:7px;font-size:14px}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid #e5e8eb;text-align:right;font-size:13px}th{background:#eef2f6}
+#login{max-width:420px;margin:10vh auto}.muted{color:#68758a}.hidden{display:none}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}
+</style>
+</head>
+<body>
+<div id="login" class="panel">
+<h1>MPF Professional Accounts</h1><p class="muted">Online Accounts System</p>
+<div id="loginBox">
+<label>Email</label><input id="email" type="email">
+<label>Password</label><input id="password" type="password">
+<div class="row" style="margin-top:12px"><button onclick="login()">Login</button><button onclick="signup()">Create First Account</button></div>
+<p id="msg"></p>
+</div>
+</div>
+
+<div id="app" class="hidden">
+<header><div><h1>MPF Professional Accounts</h1><small>Online Office Accounts System</small></div><button class="red" onclick="logout()">Logout</button></header>
+<nav>
+<button onclick="show('dashboard')">Dashboard</button><button onclick="show('transactions')">Transactions</button>
+<button onclick="show('accounts')">Accounts</button><button onclick="show('users')">Users</button><button onclick="show('reports')">Reports</button><button onclick="show('categories')">Categories</button>
+</nav>
+<main>
+<section id="dashboard" class="page active">
+<div class="cards">
+<div class="card">Cash Balance<div id="cash" class="n">₨ 0</div></div>
+<div class="card">Bank Balance<div id="bank" class="n">₨ 0</div></div>
+<div class="card">Total Balance<div id="total" class="n">₨ 0</div></div>
+<div class="card">Transactions<div id="txcount" class="n">0</div></div>
+</div>
+<div class="panel"><h2>Quick Entry</h2><div class="row"><button onclick="show('transactions');setType('receipt')">Receipt</button><button onclick="show('transactions');setType('payment')">Payment</button><button onclick="show('transactions');setType('transfer')">Bank Transfer</button></div></div>
+</section>
+
+<section id="transactions" class="page">
+<div class="panel"><h2>Transaction Entry</h2>
+<div class="grid">
+<div><label>Date</label><input id="date" type="date"></div>
+<div><label>Type</label><select id="type" onchange="toggleTransfer()"><option value="receipt">Receipt</option><option value="payment">Payment</option><option value="transfer">Transfer</option></select></div>
+<div><label>From Account</label><select id="account"></select></div>
+<div id="toWrap"><label>To Account</label><select id="toAccount"></select></div>
+<div><label>Amount</label><input id="amount" type="number" min="0.01" step="0.01"></div>
+<div><label>Category</label><select id="category"></select></div><div><label>Party</label><input id="party"></div>
+<div><label>Reference No.</label><input id="ref"></div>
+<div><label>Description</label><input id="desc"></div>
+</div><div class="row" style="margin-top:12px"><button onclick="saveTx()">Save Entry</button><button onclick="loadAll()">Refresh</button></div></div>
+<div class="panel"><h2>Recent Transactions</h2><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Party</th><th>Description</th><th></th></tr></thead><tbody id="txbody"></tbody></table></div></div>
+</section>
+
+<section id="accounts" class="page">
+<div class="panel"><h2>Accounts</h2><div class="grid"><div><label>Name</label><input id="aname"></div><div><label>Type</label><select id="atype"><option value="cash">Cash</option><option value="bank">Bank</option><option value="other">Other</option></select></div><div><label>Opening Balance</label><input id="opening" type="number" step="0.01"></div></div><button onclick="addAccount()" style="margin-top:12px">Add Account</button></div>
+<div class="panel"><table><thead><tr><th>Name</th><th>Type</th><th>Opening</th><th>Active</th></tr></thead><tbody id="accountsbody"></tbody></table></div>
+</section>
+
+<section id="users" class="page">
+<div class="panel"><h2>Users</h2><p class="muted">Admin بعد میں یہاں سے نئے users بنائے گا۔</p>
+<div class="grid"><div><label>Full Name</label><input id="uname"></div><div><label>Email</label><input id="uemail" type="email"></div><div><label>Temporary Password</label><input id="upass" type="password"></div><div><label>Role</label><select id="urole"><option value="staff">Staff</option><option value="accounts">Accounts</option><option value="admin">Admin</option></select></div></div>
+<button onclick="addUser()" style="margin-top:12px">Add User</button><p id="usermsg"></p></div>
+</section>
+
+<section id="reports" class="page">
+<div class="panel"><h2>Reports</h2>
+<div class="grid">
+<div><label>Type</label><select id="rType"><option value="">All</option><option value="receipt">Receipt</option><option value="payment">Payment</option><option value="transfer">Transfer</option></select></div>
+<div><label>Search</label><input id="rSearch" placeholder="Party / description / voucher"></div>
+</div>
+<div class="row" style="margin-top:12px"><button onclick="exportCSV()">Export CSV / Excel</button><button onclick="printReport()">Print Report / Save PDF</button><button onclick="loadReport()">Refresh Report</button></div>
+<div class="panel" id="reportArea" style="margin-top:15px"><table><thead><tr><th>Date</th><th>Voucher</th><th>Type</th><th>Party</th><th>Amount</th><th>Description</th></tr></thead><tbody id="reportbody"></tbody></table></div>
+</div></section>
+<section id="categories" class="page">
+<div class="panel"><h2>Expense / Account Categories</h2>
+<p class="muted">یہاں سے نئی category خود add کر سکتے ہیں، مثلاً Scholarship، Electricity یا Office Expenses۔</p>
+<div class="row"><input id="catname" placeholder="نئی category کا نام"><select id="cattype"><option value="expense">Expense</option><option value="income">Income</option><option value="transfer">Transfer</option></select><button onclick="addCategory()">Add Category</button></div></div>
+<div class="panel"><table><thead><tr><th>Name</th><th>Type</th></tr></thead><tbody id="catbody"></tbody></table></div>
+</section>
+</main></div>
+
+<script>
+const SUPABASE_URL='https://bfjgzglkiquxilhaemgq.supabase.co';
+const SUPABASE_KEY='sb_publishable_UEv-9XNhn7StzKtVzlBjRw_DL0gnFZH';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let session=null, profile=null, accounts=[];
+
+const money=n=>'₨ '+Number(n||0).toLocaleString('en-PK',{minimumFractionDigits:2,maximumFractionDigits:2});
+function msg(t){document.getElementById('msg').textContent=t}
+function show(id){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');if(id==='reports')loadReport()}
+function setType(t){document.getElementById('type').value=t;toggleTransfer()}
+function toggleTransfer(){document.getElementById('toWrap').style.display=document.getElementById('type').value==='transfer'?'block':'none'}
+async function login(){const {data,error}=await sb.auth.signInWithPassword({email:email.value,password:password.value});if(error)return msg(error.message);session=data.session;await start()}
+async function signup(){const {data,error}=await sb.auth.signUp({email:email.value,password:password.value});if(error)return msg(error.message);if(data.session){session=data.session;await start()}else msg('Account created. اگر email confirmation مانگے تو email confirm کریں۔')}
+async function logout(){await sb.auth.signOut();location.reload()}
+async function start(){document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');date.value=new Date().toISOString().slice(0,10);const p=await sb.from('user_profiles').select('*').eq('id',session.user.id).single();profile=p.data;await loadAll()}
+async function loadAll(){const a=await sb.from('accounts').select('*').eq('active',true).order('name');accounts=a.data||[];account.innerHTML=accounts.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');toAccount.innerHTML=account.innerHTML;accountsbody.innerHTML=accounts.map(x=>`<tr><td>${x.name}</td><td>${x.account_type}</td><td>${money(x.opening_balance)}</td><td>${x.active?'Yes':'No'}</td></tr>`).join('');
+const t=await sb.from('transactions').select('*').order('transaction_date',{ascending:false}).limit(200);const tx=t.data||[];txcount.textContent=tx.length;txbody.innerHTML=tx.map(x=>`<tr><td>${x.transaction_date}</td><td>${x.transaction_type}</td><td>${money(x.amount)}</td><td>${x.party||''}</td><td>${x.description||''}</td><td><button onclick="editTx('${x.id}')">Edit</button> <button onclick="printVoucher('${x.id}')">Voucher</button></td></tr>`).join('');
+const c=await sb.from('categories').select('*').eq('active',true).order('name'); const cats=c.data||[]; category.innerHTML=cats.map(x=>`<option value="${x.id}">${x.name}</option>`).join(''); catbody.innerHTML=cats.map(x=>`<tr><td>${x.name}</td><td>${x.category_type}</td></tr>`).join(''); let cash=0,bank=0;accounts.forEach(x=>{let b=Number(x.opening_balance||0);tx.forEach(y=>{if(y.account_id===x.id){if(y.transaction_type==='receipt')b+=Number(y.amount);if(y.transaction_type==='payment'||y.transaction_type==='transfer')b-=Number(y.amount)}if(y.to_account_id===x.id&&y.transaction_type==='transfer')b+=Number(y.amount)});if(x.account_type==='cash')cash+=b;if(x.account_type==='bank')bank+=b});document.getElementById('cash').textContent=money(cash);document.getElementById('bank').textContent=money(bank);document.getElementById('total').textContent=money(cash+bank)}
+async function saveTx(){const obj={transaction_date:date.value,transaction_type:type.value,account_id:account.value||null,to_account_id:type.value==='transfer'?(toAccount.value||null):null,category_id:category.value||null,amount:Number(amount.value),party:party.value,reference_no:ref.value,description:desc.value,created_by:session.user.id};if(!obj.amount)return alert('Amount required');const {error}=await sb.from('transactions').insert(obj);if(error)return alert(error.message);amount.value='';party.value='';ref.value='';desc.value='';await loadAll()}
+async function addCategory(){if(!catname.value.trim())return;const {error}=await sb.from('categories').insert({name:catname.value.trim(),category_type:cattype.value});if(error)return alert(error.message);catname.value='';await loadAll()}
+async function loadReport(){const t=await sb.from('transactions').select('*').order('transaction_date',{ascending:false});let tx=t.data||[];const typ=rType.value,q=(rSearch.value||'').toLowerCase();if(typ)tx=tx.filter(x=>x.transaction_type===typ);if(q)tx=tx.filter(x=>(x.party||'').toLowerCase().includes(q)||(x.description||'').toLowerCase().includes(q)||(x.reference_no||'').toLowerCase().includes(q)||(x.voucher_no||'').toLowerCase().includes(q));reportbody.innerHTML=tx.map(x=>`<tr><td>${x.transaction_date}</td><td>${x.voucher_no||''}</td><td>${x.transaction_type}</td><td>${x.party||''}</td><td>${money(x.amount)}</td><td>${x.description||''}</td></tr>`).join('');return tx}
+async function exportCSV(){const tx=await loadReport();const rows=[['Date','Voucher No','Type','Party','Amount','Description','Reference']];tx.forEach(x=>rows.push([x.transaction_date,x.voucher_no||'',x.transaction_type,x.party||'',x.amount,x.description||'',x.reference_no||'']));const csv='\\ufeff'+rows.map(r=>r.map(v=>'\"'+String(v).replaceAll('\"','\"\"')+'\"').join(',')).join('\\r\\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='MPF_Transactions_Report.csv';a.click()}
+async function printReport(){await loadReport();const w=window.open('','_blank');w.document.write('<html><head><title>MPF Transactions Report</title><style>body{font-family:Arial}table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:7px;text-align:left}h2{text-align:center}</style></head><body><h2>MPF Professional Forum - Transactions Report</h2>'+document.getElementById('reportArea').innerHTML+'</body></html>');w.document.close();w.print()}
+async function addAccount(){if(!aname.value)return;const {error}=await sb.from('accounts').insert({name:aname.value,account_type:atype.value,opening_balance:Number(opening.value||0)});if(error)return alert(error.message);aname.value='';opening.value='';await loadAll()}
+
+async function printVoucher(id){
+  const {data:x,error}=await sb.from('transactions').select('*').eq('id',id).single();
+  if(error||!x)return alert('Voucher not found');
+  const title=x.transaction_type==='receipt'?'RECEIPT VOUCHER':x.transaction_type==='payment'?'PAYMENT VOUCHER':'TRANSFER VOUCHER';
+  const w=window.open('','_blank');
+  if(!w)return alert('Please allow pop-ups for this website.');
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
+  <style>
+  body{font-family:Arial,Tahoma,sans-serif;margin:40px;color:#111}
+  .voucher{max-width:760px;margin:auto;border:2px solid #222;padding:28px}
+  h1{text-align:center;margin:0 0 6px;font-size:24px}.org{text-align:center;font-size:18px;font-weight:bold;margin-bottom:24px}
+  .meta{display:flex;justify-content:space-between;border-bottom:1px solid #999;padding-bottom:12px;margin-bottom:20px}
+  table{width:100%;border-collapse:collapse}td{padding:12px;border-bottom:1px solid #ddd}td:first-child{font-weight:bold;width:30%}
+  .amount{font-size:22px;font-weight:bold;margin:22px 0;text-align:right}
+  .sign{display:flex;justify-content:space-between;margin-top:65px}.sign div{border-top:1px solid #222;width:30%;text-align:center;padding-top:7px}
+  @media print{body{margin:0}.voucher{border:2px solid #222;margin:0;max-width:none}}
+  </style></head><body><div class="voucher">
+  <h1>${esc(title)}</h1><div class="org">Memon Professional Forum</div>
+  <div class="meta"><span>Voucher No: <b>${esc(x.voucher_no||x.reference_no||'')}</b></span><span>Date: <b>${esc(x.transaction_date||'')}</b></span></div>
+  <table>
+  <tr><td>Party</td><td>${esc(x.party)}</td></tr>
+  <tr><td>Amount</td><td>${Number(x.amount||0).toLocaleString('en-PK')} PKR</td></tr>
+  <tr><td>Reference</td><td>${esc(x.reference_no)}</td></tr>
+  <tr><td>Description</td><td>${esc(x.description)}</td></tr>
+  </table>
+  <div class="amount">Amount: PKR ${Number(x.amount||0).toLocaleString('en-PK')}</div>
+  <div class="sign"><div>Prepared By</div><div>Checked By</div><div>Approved By</div></div>
+  </div></body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),250);
+}
+
+async function editTx(id){const n=prompt('نئی amount درج کریں:');if(n===null)return;const {error}=await sb.from('transactions').update({amount:Number(n),updated_at:new Date().toISOString()}).eq('id',id);if(error)alert(error.message);else loadAll()}
+async function addUser(){if(!profile||profile.role!=='admin')return usermsg.textContent='صرف Admin user add کر سکتا ہے۔';const res=await fetch(SUPABASE_URL+'/functions/v1/manage-user',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({email:uemail.value,password:upass.value,full_name:uname.value,role:urole.value})});const j=await res.json();usermsg.textContent=j.message||j.error||'Done';}
+sb.auth.getSession().then(({data})=>{if(data.session){session=data.session;start()}})
+</script>
+</body></html>
